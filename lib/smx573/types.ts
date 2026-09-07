@@ -19,6 +19,8 @@ export interface EditChart573 {
   song_id: number;
 
   meter: number;
+  play_count?: number;
+  pass_count?: number;
   is_edit: true;
 
   user_bookmarked: boolean;
