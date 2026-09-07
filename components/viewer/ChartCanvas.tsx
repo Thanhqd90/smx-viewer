@@ -2,22 +2,22 @@
 
 import { useEffect, useRef } from "react";
 
-import {
-  beatToY,
-  isNoteVisible,
-  laneX,
-  PIXELS_PER_BEAT,
-} from "@/lib/smx/rendering";
+import { beatToY, isNoteVisible, laneX } from "@/lib/smx/rendering";
 import type { PlayableSMXChart } from "@/lib/smx/types";
 
 interface ChartCanvasProps {
   chart: PlayableSMXChart;
   currentBeat: number;
+  pixelsPerBeat: number;
 }
 
 const RECEPTOR_Y = 88;
 
-export default function ChartCanvas({ chart, currentBeat }: ChartCanvasProps) {
+export default function ChartCanvas({
+  chart,
+  currentBeat,
+  pixelsPerBeat,
+}: ChartCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -83,7 +83,9 @@ export default function ChartCanvas({ chart, currentBeat }: ChartCanvasProps) {
           continue;
         }
 
-        if (!isNoteVisible(note, currentBeat, height, RECEPTOR_Y)) {
+        if (
+          !isNoteVisible(note, currentBeat, height, RECEPTOR_Y, pixelsPerBeat)
+        ) {
           continue;
         }
 
@@ -93,7 +95,7 @@ export default function ChartCanvas({ chart, currentBeat }: ChartCanvasProps) {
           note.beat,
           currentBeat,
           RECEPTOR_Y,
-          PIXELS_PER_BEAT,
+          pixelsPerBeat,
         );
 
         if (note.type === "hold" && note.endBeat !== undefined) {
@@ -101,7 +103,7 @@ export default function ChartCanvas({ chart, currentBeat }: ChartCanvasProps) {
             note.endBeat,
             currentBeat,
             RECEPTOR_Y,
-            PIXELS_PER_BEAT,
+            pixelsPerBeat,
           );
           const top = Math.min(startY, endY);
           const bodyHeight = Math.max(6, Math.abs(endY - startY));
@@ -128,7 +130,7 @@ export default function ChartCanvas({ chart, currentBeat }: ChartCanvasProps) {
     resizeObserver.observe(canvas);
 
     return () => resizeObserver.disconnect();
-  }, [chart, currentBeat]);
+  }, [chart, currentBeat, pixelsPerBeat]);
 
   return (
     <canvas ref={canvasRef} className="chart-canvas" aria-label="SMX chart" />

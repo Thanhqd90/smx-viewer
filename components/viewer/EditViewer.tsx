@@ -4,6 +4,17 @@ import { useEffect, useRef, useState } from "react";
 
 import ChartCanvas from "@/components/viewer/ChartCanvas";
 import { formatPlaybackTime } from "@/lib/smx/playback";
+import {
+  clampScrollSpeed,
+  clampVolume,
+  DEFAULT_SCROLL_SPEED,
+  DEFAULT_VOLUME,
+  MAX_SCROLL_SPEED,
+  MIN_SCROLL_SPEED,
+  parseStoredMuted,
+  parseStoredScrollSpeed,
+  parseStoredVolume,
+} from "@/lib/smx/preferences";
 import { secondsToBeat } from "@/lib/smx/timing";
 import type { PlayableSMXChart } from "@/lib/smx/types";
 
@@ -22,6 +33,10 @@ export default function EditViewer({ displayId }: EditViewerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentBeat, setCurrentBeat] = useState(14);
+  const [volume, setVolume] = useState(DEFAULT_VOLUME);
+  const [muted, setMuted] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(DEFAULT_SCROLL_SPEED);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
@@ -63,6 +78,40 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
     return () => controller.abort();
   }, [displayId]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        setVolume(parseStoredVolume(localStorage.getItem("smx-viewer.volume")));
+        setMuted(parseStoredMuted(localStorage.getItem("smx-viewer.muted")));
+        setScrollSpeed(
+          parseStoredScrollSpeed(
+            localStorage.getItem("smx-viewer.scrollSpeed"),
+          ),
+        );
+      } catch {
+        setVolume(DEFAULT_VOLUME);
+        setMuted(false);
+        setScrollSpeed(DEFAULT_SCROLL_SPEED);
+      } finally {
+        setPreferencesLoaded(true);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!preferencesLoaded) {
+      return;
+    }
+
+    try {
+      localStorage.setItem("smx-viewer.volume", String(volume));
+      localStorage.setItem("smx-viewer.muted", String(muted));
+      localStorage.setItem("smx-viewer.scrollSpeed", String(scrollSpeed));
+    } catch {
+      // Browser storage can be unavailable; in-memory preferences still work.
+    }
+  }, [muted, preferencesLoaded, scrollSpeed, volume]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -132,6 +181,17 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     };
   }, [chart]);
 
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    if (!audio || !chart) {
+      return;
+    }
+
+    audio.volume = clampVolume(volume);
+    audio.muted = muted;
+  }, [chart, muted, volume]);
+
   const handlePlay = () => {
     const audio = audioRef.current;
 
@@ -147,6 +207,32 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
   const handlePause = () => {
     audioRef.current?.pause();
+  };
+
+  const handleVolumeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextVolume = clampVolume(Number(event.target.value));
+
+    setVolume(nextVolume);
+
+    if (audioRef.current) {
+      audioRef.current.volume = nextVolume;
+    }
+  };
+
+  const handleMuteToggle = () => {
+    const nextMuted = !muted;
+
+    setMuted(nextMuted);
+
+    if (audioRef.current) {
+      audioRef.current.muted = nextMuted;
+    }
+  };
+
+  const handleScrollSpeedChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setScrollSpeed(clampScrollSpeed(Number(event.target.value)));
   };
 
   const handleSeek = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -236,8 +322,43 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
           </span>
         </div>
+        <div className="preference-controls">
+          <label>
+            Volume
+            <input
+              aria-label="Volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={volume}
+              onChange={handleVolumeChange}
+            />
+            <span>{Math.round(volume * 100)}%</span>
+          </label>
+          <button type="button" onClick={handleMuteToggle}>
+            {muted ? "Unmute" : "Mute"}
+          </button>
+          <label>
+            Scroll Speed
+            <input
+              aria-label="Scroll speed"
+              type="range"
+              min={MIN_SCROLL_SPEED}
+              max={MAX_SCROLL_SPEED}
+              step="1"
+              value={scrollSpeed}
+              onChange={handleScrollSpeedChange}
+            />
+            <span>{scrollSpeed} px/beat</span>
+          </label>
+        </div>
         <audio ref={audioRef} src={chart.audioUrl} preload="auto" />
-        <ChartCanvas chart={chart} currentBeat={currentBeat} />
+        <ChartCanvas
+          chart={chart}
+          currentBeat={currentBeat}
+          pixelsPerBeat={scrollSpeed}
+        />
       </section>
     </main>
   );

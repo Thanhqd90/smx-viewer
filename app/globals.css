@@ -141,6 +141,32 @@ body {
   white-space: nowrap;
 }
 
+.preference-controls {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.preference-controls label {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.preference-controls input {
+  accent-color: var(--accent);
+}
+
+.preference-controls span {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  min-width: 68px;
+}
+
 .chart-panel audio {
   display: none;
 }
