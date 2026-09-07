@@ -2,7 +2,13 @@
 
 import { useEffect, useRef } from "react";
 
-import { beatToY, isNoteVisible, laneX } from "@/lib/smx/rendering";
+import {
+  beatToY,
+  getBeatQuantization,
+  isNoteVisible,
+  laneX,
+  QUANTIZATION_COLORS,
+} from "@/lib/smx/rendering";
 import type { PlayableSMXChart } from "@/lib/smx/types";
 
 interface ChartCanvasProps {
@@ -91,6 +97,7 @@ export default function ChartCanvas({
 
         const centerX = laneX(width, chart.tracks, note.lane);
         const noteWidth = Math.max(12, laneWidth * 0.42);
+        const noteColor = QUANTIZATION_COLORS[getBeatQuantization(note.beat)];
         const startY = beatToY(
           note.beat,
           currentBeat,
@@ -115,10 +122,10 @@ export default function ChartCanvas({
             noteWidth / 2,
             bodyHeight,
           );
-          context.fillStyle = "#b7f0cf";
+          context.fillStyle = noteColor;
           context.fillRect(centerX - noteWidth / 2, startY - 7, noteWidth, 14);
         } else {
-          context.fillStyle = "#f4c95d";
+          context.fillStyle = noteColor;
           context.fillRect(centerX - noteWidth / 2, startY - 7, noteWidth, 14);
         }
       }

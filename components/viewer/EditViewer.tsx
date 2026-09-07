@@ -14,6 +14,9 @@ import {
   parseStoredMuted,
   parseStoredScrollSpeed,
   parseStoredVolume,
+  DEFAULT_PLAYBACK_RATE,
+  PLAYBACK_RATES,
+  parseStoredPlaybackRate,
 } from "@/lib/smx/preferences";
 import { secondsToBeat } from "@/lib/smx/timing";
 import type { PlayableSMXChart } from "@/lib/smx/types";
@@ -36,6 +39,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
   const [volume, setVolume] = useState(DEFAULT_VOLUME);
   const [muted, setMuted] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(DEFAULT_SCROLL_SPEED);
+  const [playbackRate, setPlaybackRate] = useState(DEFAULT_PLAYBACK_RATE);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -89,10 +93,16 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             localStorage.getItem("smx-viewer.scrollSpeed"),
           ),
         );
+        setPlaybackRate(
+          parseStoredPlaybackRate(
+            localStorage.getItem("smx-viewer.playbackRate"),
+          ),
+        );
       } catch {
         setVolume(DEFAULT_VOLUME);
         setMuted(false);
         setScrollSpeed(DEFAULT_SCROLL_SPEED);
+        setPlaybackRate(DEFAULT_PLAYBACK_RATE);
       } finally {
         setPreferencesLoaded(true);
       }
@@ -108,10 +118,11 @@ export default function EditViewer({ displayId }: EditViewerProps) {
       localStorage.setItem("smx-viewer.volume", String(volume));
       localStorage.setItem("smx-viewer.muted", String(muted));
       localStorage.setItem("smx-viewer.scrollSpeed", String(scrollSpeed));
+      localStorage.setItem("smx-viewer.playbackRate", String(playbackRate));
     } catch {
       // Browser storage can be unavailable; in-memory preferences still work.
     }
-  }, [muted, preferencesLoaded, scrollSpeed, volume]);
+  }, [muted, playbackRate, preferencesLoaded, scrollSpeed, volume]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -190,7 +201,8 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
     audio.volume = clampVolume(volume);
     audio.muted = muted;
-  }, [chart, muted, volume]);
+    audio.playbackRate = playbackRate;
+  }, [chart, muted, playbackRate, volume]);
 
   const handlePlay = () => {
     const audio = audioRef.current;
@@ -233,6 +245,18 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     setScrollSpeed(clampScrollSpeed(Number(event.target.value)));
+  };
+
+  const handlePlaybackRateChange = (
+    event: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    const nextRate = parseStoredPlaybackRate(event.target.value);
+
+    setPlaybackRate(nextRate);
+
+    if (audioRef.current) {
+      audioRef.current.playbackRate = nextRate;
+    }
   };
 
   const handleSeek = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -351,6 +375,20 @@ export default function EditViewer({ displayId }: EditViewerProps) {
               onChange={handleScrollSpeedChange}
             />
             <span>{scrollSpeed} px/beat</span>
+          </label>
+          <label>
+            Playback Rate
+            <select
+              aria-label="Playback rate"
+              value={playbackRate}
+              onChange={handlePlaybackRateChange}
+            >
+              {PLAYBACK_RATES.map((rate) => (
+                <option key={rate} value={rate}>
+                  {rate}x
+                </option>
+              ))}
+            </select>
           </label>
         </div>
         <audio ref={audioRef} src={chart.audioUrl} preload="auto" />

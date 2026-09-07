@@ -5,6 +5,7 @@ import {
   clampVolume,
   parseStoredMuted,
   parseStoredScrollSpeed,
+  parseStoredPlaybackRate,
   parseStoredVolume,
 } from "../lib/smx/preferences";
 
@@ -30,5 +31,13 @@ describe("viewer preferences", () => {
     expect(parseStoredScrollSpeed("120")).toBe(120);
     expect(parseStoredScrollSpeed("invalid")).toBe(80);
     expect(parseStoredScrollSpeed(null)).toBe(80);
+  });
+
+  it("accepts only supported playback rates", () => {
+    expect(parseStoredPlaybackRate("0.5")).toBe(0.5);
+    expect(parseStoredPlaybackRate("1.25")).toBe(1.25);
+    expect(parseStoredPlaybackRate("invalid")).toBe(1);
+    expect(parseStoredPlaybackRate("2")).toBe(1);
+    expect(parseStoredPlaybackRate(null)).toBe(1);
   });
 });
