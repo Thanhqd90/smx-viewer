@@ -7,6 +7,8 @@ export interface SMXNote {
   lane: number;
   type: SMXNoteType;
   endBeat?: number;
+  rawTimeMs?: number;
+  rawLengthMs?: number;
 }
 
 export interface BPMChange {
