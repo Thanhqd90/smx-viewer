@@ -1,6 +1,6 @@
 import { getRawChart } from "@/lib/smx/api";
 import { getEditByDisplayId } from "@/lib/smx573/api";
-import { parseNoteData } from "@/lib/smx/parser";
+import { normalizePlayableChart } from "@/lib/smx/normalize";
 
 interface RouteContext {
   params: Promise<{
@@ -20,10 +20,7 @@ export async function GET(_request: Request, context: RouteContext) {
     }
 
     const rawChart = await getRawChart(metadata.id);
-    const normalized = {
-      tracks: rawChart.chart_data.tracks,
-      notes: parseNoteData(rawChart.chart_data.noteData),
-    };
+    const normalized = normalizePlayableChart(metadata, rawChart);
 
     return Response.json({
       metadata,

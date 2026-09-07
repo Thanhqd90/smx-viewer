@@ -1,9 +1,20 @@
 const SMX_DATA_BASE = "https://data.stepmaniax.com";
 
+export interface RawSMXSong {
+  title: string;
+  subtitle: string;
+  artist: string;
+  timing_bpms: string;
+  timing_stops: string;
+  timing_offset_ms: number;
+  music: string;
+  cover?: string;
+}
+
 export interface RawSMXChartResponse {
   success: boolean;
   chart: unknown;
-  song: unknown;
+  song: RawSMXSong;
   gamer: unknown;
   chart_data: {
     tracks: number;

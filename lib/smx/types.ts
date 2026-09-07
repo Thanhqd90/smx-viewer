@@ -11,16 +11,14 @@ export interface SMXNote {
   rawLengthMs?: number;
 }
 
-export interface BPMChange {
-  beat: number;
-  bpm: number;
-}
+import type { SMXTiming } from "./timing";
 
-export interface SMXChart {
+export interface PlayableSMXChart {
   id: number;
   displayId: string;
 
   title: string;
+  subtitle?: string;
   artist: string;
   author: string;
 
@@ -28,11 +26,12 @@ export interface SMXChart {
   meter: number;
   tracks: number;
 
-  timingOffsetMs: number;
-  bpms: BPMChange[];
+  timing: SMXTiming;
 
   audioUrl: string;
   coverUrl?: string;
 
   notes: SMXNote[];
 }
+
+export type SMXChart = PlayableSMXChart;
