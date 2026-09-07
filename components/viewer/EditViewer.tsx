@@ -3,15 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 
 import ChartCanvas from "@/components/viewer/ChartCanvas";
+import {
+  AssistTickPlayer,
+  deriveAssistEvents,
+  getCrossedAssistEvents,
+} from "@/lib/smx/assistTick";
 import { formatPlaybackTime } from "@/lib/smx/playback";
 import {
+  clampAssistTickVolume,
   clampScrollSpeed,
   clampVolume,
+  DEFAULT_ASSIST_TICK_VOLUME,
   DEFAULT_SCROLL_SPEED,
   DEFAULT_VOLUME,
   MAX_SCROLL_SPEED,
   MIN_SCROLL_SPEED,
   parseStoredMuted,
+  parseStoredAssistTick,
+  parseStoredAssistTickVolume,
   parseStoredScrollSpeed,
   parseStoredVolume,
   DEFAULT_PLAYBACK_RATE,
@@ -29,6 +38,24 @@ interface EditResponse {
   normalized: PlayableSMXChart;
 }
 
+function ensureAssistTickPlayer(
+  playerRef: { current: AssistTickPlayer | null },
+  volume: number,
+): AssistTickPlayer {
+  if (!playerRef.current) {
+    playerRef.current = new AssistTickPlayer();
+    playerRef.current.setVolume(volume);
+  }
+
+  return playerRef.current;
+}
+
+function closeAssistTickPlayer(playerRef: {
+  current: AssistTickPlayer | null;
+}): void {
+  playerRef.current?.close();
+}
+
 export default function EditViewer({ displayId }: EditViewerProps) {
   const [chart, setChart] = useState<PlayableSMXChart | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +67,17 @@ export default function EditViewer({ displayId }: EditViewerProps) {
   const [muted, setMuted] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(DEFAULT_SCROLL_SPEED);
   const [playbackRate, setPlaybackRate] = useState(DEFAULT_PLAYBACK_RATE);
+  const [assistTickEnabled, setAssistTickEnabled] = useState(false);
+  const [assistTickVolume, setAssistTickVolume] = useState(
+    DEFAULT_ASSIST_TICK_VOLUME,
+  );
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const assistEventsRef = useRef<ReturnType<typeof deriveAssistEvents>>([]);
+  const previousAudioTimeRef = useRef(0);
+  const assistTickEnabledRef = useRef(false);
+  const assistTickVolumeRef = useRef(DEFAULT_ASSIST_TICK_VOLUME);
+  const assistTickPlayerRef = useRef<AssistTickPlayer | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -98,11 +134,21 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             localStorage.getItem("smx-viewer.playbackRate"),
           ),
         );
+        setAssistTickEnabled(
+          parseStoredAssistTick(localStorage.getItem("smx-viewer.assistTick")),
+        );
+        setAssistTickVolume(
+          parseStoredAssistTickVolume(
+            localStorage.getItem("smx-viewer.assistTickVolume"),
+          ),
+        );
       } catch {
         setVolume(DEFAULT_VOLUME);
         setMuted(false);
         setScrollSpeed(DEFAULT_SCROLL_SPEED);
         setPlaybackRate(DEFAULT_PLAYBACK_RATE);
+        setAssistTickEnabled(false);
+        setAssistTickVolume(DEFAULT_ASSIST_TICK_VOLUME);
       } finally {
         setPreferencesLoaded(true);
       }
@@ -119,10 +165,36 @@ export default function EditViewer({ displayId }: EditViewerProps) {
       localStorage.setItem("smx-viewer.muted", String(muted));
       localStorage.setItem("smx-viewer.scrollSpeed", String(scrollSpeed));
       localStorage.setItem("smx-viewer.playbackRate", String(playbackRate));
+      localStorage.setItem("smx-viewer.assistTick", String(assistTickEnabled));
+      localStorage.setItem(
+        "smx-viewer.assistTickVolume",
+        String(assistTickVolume),
+      );
     } catch {
       // Browser storage can be unavailable; in-memory preferences still work.
     }
-  }, [muted, playbackRate, preferencesLoaded, scrollSpeed, volume]);
+  }, [
+    assistTickEnabled,
+    assistTickVolume,
+    muted,
+    playbackRate,
+    preferencesLoaded,
+    scrollSpeed,
+    volume,
+  ]);
+
+  useEffect(() => {
+    assistTickEnabledRef.current = assistTickEnabled;
+    assistTickVolumeRef.current = assistTickVolume;
+    assistTickPlayerRef.current?.setVolume(assistTickVolume);
+  }, [assistTickEnabled, assistTickVolume]);
+
+  useEffect(() => {
+    assistEventsRef.current = chart
+      ? deriveAssistEvents(chart.notes, chart.timing)
+      : [];
+    previousAudioTimeRef.current = audioRef.current?.currentTime ?? 0;
+  }, [chart]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -142,6 +214,23 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
     const updateFromAudio = () => {
       const time = audio.currentTime;
+
+      if (assistTickEnabledRef.current) {
+        const crossedEvents = getCrossedAssistEvents(
+          assistEventsRef.current,
+          previousAudioTimeRef.current,
+          time,
+        );
+        const player = assistTickPlayerRef.current;
+
+        if (player) {
+          for (let index = 0; index < crossedEvents.length; index += 1) {
+            player.play();
+          }
+        }
+      }
+
+      previousAudioTimeRef.current = time;
       setCurrentTime(time);
       setCurrentBeat(secondsToBeat(time, chart.timing));
 
@@ -152,6 +241,16 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
     const handlePlay = () => {
       setIsPlaying(true);
+      previousAudioTimeRef.current = audio.currentTime;
+
+      if (assistTickEnabledRef.current) {
+        const player = ensureAssistTickPlayer(
+          assistTickPlayerRef,
+          assistTickVolumeRef.current,
+        );
+        void player.resume();
+      }
+
       stopFrameLoop();
       frameId = requestAnimationFrame(updateFromAudio);
     };
@@ -191,6 +290,10 @@ export default function EditViewer({ displayId }: EditViewerProps) {
       audio.pause();
     };
   }, [chart]);
+
+  useEffect(() => {
+    return () => closeAssistTickPlayer(assistTickPlayerRef);
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -270,8 +373,35 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     const nextTime = Math.min(Math.max(requestedTime, 0), audio.duration);
 
     audio.currentTime = nextTime;
+    previousAudioTimeRef.current = nextTime;
     setCurrentTime(audio.currentTime);
     setCurrentBeat(secondsToBeat(audio.currentTime, chart.timing));
+  };
+
+  const handleAssistTickToggle = () => {
+    const nextEnabled = !assistTickEnabled;
+
+    setAssistTickEnabled(nextEnabled);
+    assistTickEnabledRef.current = nextEnabled;
+
+    if (nextEnabled) {
+      void ensureAssistTickPlayer(
+        assistTickPlayerRef,
+        assistTickVolumeRef.current,
+      ).resume();
+    }
+  };
+
+  const handleAssistTickVolumeChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const nextVolume = clampAssistTickVolume(Number(event.target.value));
+
+    setAssistTickVolume(nextVolume);
+    assistTickVolumeRef.current = nextVolume;
+    ensureAssistTickPlayer(assistTickPlayerRef, nextVolume).setVolume(
+      nextVolume,
+    );
   };
 
   if (error) {
@@ -389,6 +519,22 @@ export default function EditViewer({ displayId }: EditViewerProps) {
                 </option>
               ))}
             </select>
+          </label>
+          <button type="button" onClick={handleAssistTickToggle}>
+            Assist Tick: {assistTickEnabled ? "On" : "Off"}
+          </button>
+          <label>
+            Assist Volume
+            <input
+              aria-label="Assist Tick volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={assistTickVolume}
+              onChange={handleAssistTickVolumeChange}
+            />
+            <span>{Math.round(assistTickVolume * 100)}%</span>
           </label>
         </div>
         <audio ref={audioRef} src={chart.audioUrl} preload="auto" />

@@ -130,3 +130,21 @@ fractional positions. Stop durations are seconds: for `Monolith`, the
 918 ms interval to beat 166.5 (306 ms of one beat at 196 BPM plus 612 ms).
 The 0.918-second stop at beat 226 similarly produces a 1224 ms interval to
 beat 227.
+
+## 573 homepage metadata
+
+The public chart lookup accepts pagination fields inside the existing `q`
+JSON object. A request using `{"_take":100,"_skip":0}` returned 100 records;
+the next page uses `{"_take":100,"_skip":100}`. Published edit retrieval
+filters with `is_edit: true` and `edit_publicity: "published"`.
+
+The public song metadata resource is:
+
+```text
+GET https://api.smx.573.no/songs?q={"id":593}
+```
+
+It returns lightweight song records including `id`, `game_song_id`, `title`,
+and `artist`. Homepage cards use `song_id` from the 573 edit record to resolve
+titles through this resource; they do not call the full StepManiaX chart
+endpoint.

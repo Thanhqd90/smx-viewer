@@ -3,7 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   clampScrollSpeed,
   clampVolume,
+  DEFAULT_SCROLL_SPEED,
+  DEFAULT_ASSIST_TICK_VOLUME,
+  clampAssistTickVolume,
+  MAX_SCROLL_SPEED,
+  MIN_SCROLL_SPEED,
   parseStoredMuted,
+  parseStoredAssistTick,
+  parseStoredAssistTickVolume,
   parseStoredScrollSpeed,
   parseStoredPlaybackRate,
   parseStoredVolume,
@@ -26,11 +33,11 @@ describe("viewer preferences", () => {
   });
 
   it("clamps scroll speed to the supported range", () => {
-    expect(clampScrollSpeed(20)).toBe(40);
-    expect(clampScrollSpeed(240)).toBe(200);
+    expect(clampScrollSpeed(MIN_SCROLL_SPEED - 1)).toBe(MIN_SCROLL_SPEED);
+    expect(clampScrollSpeed(MAX_SCROLL_SPEED + 1)).toBe(MAX_SCROLL_SPEED);
     expect(parseStoredScrollSpeed("120")).toBe(120);
-    expect(parseStoredScrollSpeed("invalid")).toBe(80);
-    expect(parseStoredScrollSpeed(null)).toBe(80);
+    expect(parseStoredScrollSpeed("invalid")).toBe(DEFAULT_SCROLL_SPEED);
+    expect(parseStoredScrollSpeed(null)).toBe(DEFAULT_SCROLL_SPEED);
   });
 
   it("accepts only supported playback rates", () => {
@@ -39,5 +46,17 @@ describe("viewer preferences", () => {
     expect(parseStoredPlaybackRate("invalid")).toBe(1);
     expect(parseStoredPlaybackRate("2")).toBe(1);
     expect(parseStoredPlaybackRate(null)).toBe(1);
+  });
+
+  it("parses and clamps assist tick preferences", () => {
+    expect(parseStoredAssistTick("true")).toBe(true);
+    expect(parseStoredAssistTick("false")).toBe(false);
+    expect(parseStoredAssistTick("invalid")).toBe(false);
+    expect(clampAssistTickVolume(-1)).toBe(0);
+    expect(clampAssistTickVolume(2)).toBe(1);
+    expect(parseStoredAssistTickVolume("invalid")).toBe(
+      DEFAULT_ASSIST_TICK_VOLUME,
+    );
+    expect(parseStoredAssistTickVolume(null)).toBe(DEFAULT_ASSIST_TICK_VOLUME);
   });
 });
