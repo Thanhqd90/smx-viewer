@@ -94,6 +94,57 @@ body {
   padding: 16px;
 }
 
+.viewer-controls {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.viewer-controls button {
+  background: var(--accent);
+  border: 0;
+  color: #17212b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 8px 16px;
+}
+
+.viewer-controls button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.viewer-controls span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-left: 6px;
+}
+
+.timeline-control {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.timeline-control input {
+  accent-color: var(--accent);
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-control span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chart-panel audio {
+  display: none;
+}
+
 .chart-canvas {
   display: block;
   height: min(68vh, 680px);
