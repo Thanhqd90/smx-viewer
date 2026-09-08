@@ -1,3 +1,8 @@
+import type { BeatQuantization } from "./rendering";
+import type { SMXMode } from "./types";
+
+export const SPRITE_CELL_SIZE = 128;
+
 export interface SpriteRegion {
   x: number;
   y: number;
@@ -5,12 +10,68 @@ export interface SpriteRegion {
   height: number;
 }
 
+export interface LaneSprite {
+  region: SpriteRegion;
+  rotationDegrees: number;
+}
+
 export const SMX_ARROW_SHEET = {
-  src: "/assets/arrows.png",
+  src: "/assets/smx/arrows.png",
   width: 1152,
   height: 1152,
-  cellSize: 128,
 } as const;
 
-// The official atlas is available, but semantic crop coordinates are not yet verified.
-export const VERIFIED_SPRITE_REGIONS: Record<string, SpriteRegion> = {};
+const QUANTIZATION_ROWS: Record<BeatQuantization, number> = {
+  "4th": 0,
+  "8th": 1,
+  "12th": 2,
+  "16th": 3,
+  "24th": 4,
+  "32nd": 5,
+  "48th": 6,
+  "64th": 7,
+  // Row 8 is kept as a neutral fallback until its semantic role is confirmed.
+  other: 8,
+};
+
+function cell(column: number, row: number): SpriteRegion {
+  return {
+    x: column * SPRITE_CELL_SIZE,
+    y: row * SPRITE_CELL_SIZE,
+    width: SPRITE_CELL_SIZE,
+    height: SPRITE_CELL_SIZE,
+  };
+}
+
+export function getQuantizationRow(quantization: BeatQuantization): number {
+  return QUANTIZATION_ROWS[quantization];
+}
+
+export function getSingleLaneRotation(track: number): number | null {
+  return [-90, 180, 0, 0, 90][track] ?? null;
+}
+
+export function getNoteHeadSprite(
+  track: number,
+  mode: SMXMode,
+  quantization: BeatQuantization,
+): LaneSprite | null {
+  if (mode === "dual") {
+    return null;
+  }
+
+  const singleTrack = mode === "full" ? track % 5 : track;
+  const rotationDegrees = getSingleLaneRotation(singleTrack);
+
+  if (rotationDegrees === null) {
+    return null;
+  }
+
+  const row = getQuantizationRow(quantization);
+  const column = singleTrack === 2 ? 1 : 0;
+
+  return {
+    region: cell(column, row),
+    rotationDegrees: column === 1 ? 0 : rotationDegrees,
+  };
+}

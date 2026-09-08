@@ -130,7 +130,7 @@ export class AssistTickPlayer {
     }
 
     if (!this.loadPromise) {
-      this.loadPromise = fetch("/assets/Tick.mp3")
+      this.loadPromise = fetch("/assets/smx/Tick.mp3")
         .then((response) => {
           if (!response.ok) {
             throw new Error(`Assist Tick asset failed with ${response.status}`);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   beatToY,
@@ -9,6 +9,7 @@ import {
   laneX,
   QUANTIZATION_COLORS,
 } from "@/lib/smx/rendering";
+import { getNoteHeadSprite, SMX_ARROW_SHEET } from "@/lib/smx/sprites";
 import type { PlayableSMXChart } from "@/lib/smx/types";
 
 interface ChartCanvasProps {
@@ -25,6 +26,13 @@ export default function ChartCanvas({
   pixelsPerBeat,
 }: ChartCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [spriteSheet, setSpriteSheet] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const image = new Image();
+    image.onload = () => setSpriteSheet(image);
+    image.src = SMX_ARROW_SHEET.src;
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -96,8 +104,9 @@ export default function ChartCanvas({
         }
 
         const centerX = laneX(width, chart.tracks, note.lane);
-        const noteWidth = Math.max(12, laneWidth * 0.42);
-        const noteColor = QUANTIZATION_COLORS[getBeatQuantization(note.beat)];
+        const noteSize = Math.min(laneWidth * 0.9, 96);
+        const quantization = getBeatQuantization(note.beat);
+        const noteColor = QUANTIZATION_COLORS[quantization];
         const startY = beatToY(
           note.beat,
           currentBeat,
@@ -117,18 +126,66 @@ export default function ChartCanvas({
 
           context.fillStyle = "#52b788";
           context.fillRect(
-            centerX - noteWidth / 4,
+            centerX - noteSize * 0.18,
             top,
-            noteWidth / 2,
+            noteSize * 0.36,
             bodyHeight,
           );
-          context.fillStyle = noteColor;
-          context.fillRect(centerX - noteWidth / 2, startY - 7, noteWidth, 14);
+          drawNoteHead(
+            context,
+            noteSize,
+            centerX,
+            startY,
+            note.lane,
+            quantization,
+            noteColor,
+          );
         } else {
-          context.fillStyle = noteColor;
-          context.fillRect(centerX - noteWidth / 2, startY - 7, noteWidth, 14);
+          drawNoteHead(
+            context,
+            noteSize,
+            centerX,
+            startY,
+            note.lane,
+            quantization,
+            noteColor,
+          );
         }
       }
+    };
+
+    const drawNoteHead = (
+      context: CanvasRenderingContext2D,
+      size: number,
+      centerX: number,
+      centerY: number,
+      track: number,
+      quantization: ReturnType<typeof getBeatQuantization>,
+      fallbackColor: string,
+    ) => {
+      const sprite = getNoteHeadSprite(track, chart.mode, quantization);
+
+      if (!spriteSheet || !sprite) {
+        context.fillStyle = fallbackColor;
+        context.fillRect(centerX - size / 2, centerY - 7, size, 14);
+        return;
+      }
+
+      context.save();
+      context.translate(centerX, centerY);
+      context.rotate((sprite.rotationDegrees * Math.PI) / 180);
+      context.drawImage(
+        spriteSheet,
+        sprite.region.x,
+        sprite.region.y,
+        sprite.region.width,
+        sprite.region.height,
+        -size / 2,
+        -size / 2,
+        size,
+        size,
+      );
+      context.restore();
     };
 
     draw();
@@ -137,7 +194,7 @@ export default function ChartCanvas({
     resizeObserver.observe(canvas);
 
     return () => resizeObserver.disconnect();
-  }, [chart, currentBeat, pixelsPerBeat]);
+  }, [chart, currentBeat, pixelsPerBeat, spriteSheet]);
 
   return (
     <canvas ref={canvasRef} className="chart-canvas" aria-label="SMX chart" />
