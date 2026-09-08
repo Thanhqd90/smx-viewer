@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   beatToY,
+  getHoldGeometry,
+  getLaneGeometry,
   getBeatQuantization,
   isNoteVisible,
-  laneX,
+  laneCenterX,
   QUANTIZATION_COLORS,
+  SINGLE_NOTE_SCALE,
 } from "@/lib/smx/rendering";
 import { getNoteHeadSprite, SMX_ARROW_SHEET } from "@/lib/smx/sprites";
 import type { PlayableSMXChart } from "@/lib/smx/types";
@@ -65,17 +68,22 @@ export default function ChartCanvas({
       context.fillStyle = "#101720";
       context.fillRect(0, 0, width, height);
 
-      const laneWidth = width / chart.tracks;
+      const laneGeometry = getLaneGeometry(width, chart.tracks, chart.mode);
+      const laneWidth = laneGeometry.laneWidth;
+      const noteScale = chart.mode === "single" ? SINGLE_NOTE_SCALE : 0.94;
 
       for (let lane = 0; lane < chart.tracks; lane += 1) {
+        const laneLeft =
+          laneGeometry.left + lane * (laneWidth + laneGeometry.gap);
+
         context.fillStyle = lane % 2 === 0 ? "#17212b" : "#1d2934";
-        context.fillRect(lane * laneWidth, 0, laneWidth, height);
+        context.fillRect(laneLeft, 0, laneWidth, height);
 
         context.strokeStyle = "#344554";
         context.lineWidth = 1;
         context.beginPath();
-        context.moveTo(lane * laneWidth, 0);
-        context.lineTo(lane * laneWidth, height);
+        context.moveTo(laneLeft, 0);
+        context.lineTo(laneLeft, height);
         context.stroke();
       }
 
@@ -103,8 +111,8 @@ export default function ChartCanvas({
           continue;
         }
 
-        const centerX = laneX(width, chart.tracks, note.lane);
-        const noteSize = Math.min(laneWidth * 0.9, 96);
+        const centerX = laneCenterX(laneGeometry, note.lane);
+        const noteSize = Math.min(laneWidth * noteScale, 112);
         const quantization = getBeatQuantization(note.beat);
         const noteColor = QUANTIZATION_COLORS[quantization];
         const startY = beatToY(
@@ -121,16 +129,27 @@ export default function ChartCanvas({
             RECEPTOR_Y,
             pixelsPerBeat,
           );
-          const top = Math.min(startY, endY);
-          const bodyHeight = Math.max(6, Math.abs(endY - startY));
+          const holdGeometry = getHoldGeometry(startY, endY, noteSize);
 
           context.fillStyle = "#52b788";
           context.fillRect(
             centerX - noteSize * 0.18,
-            top,
+            holdGeometry.top,
             noteSize * 0.36,
-            bodyHeight,
+            holdGeometry.bodyHeight,
           );
+          context.beginPath();
+          context.fillStyle = "#b7f0cf";
+          context.ellipse(
+            centerX,
+            holdGeometry.tailY,
+            holdGeometry.tailRadius,
+            holdGeometry.tailRadius * 0.7,
+            0,
+            0,
+            Math.PI * 2,
+          );
+          context.fill();
           drawNoteHead(
             context,
             noteSize,

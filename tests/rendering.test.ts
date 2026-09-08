@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { beatToY, isNoteVisible, laneX } from "../lib/smx/rendering";
+import {
+  beatToY,
+  getHoldGeometry,
+  getLaneGeometry,
+  isNoteVisible,
+  laneCenterX,
+  laneX,
+} from "../lib/smx/rendering";
 
 describe("chart rendering math", () => {
   it("centers lanes within the dynamic track count", () => {
@@ -22,5 +29,24 @@ describe("chart rendering math", () => {
         80,
       ),
     ).toBe(true);
+  });
+
+  it("centers tightened lanes with a gutter", () => {
+    const geometry = getLaneGeometry(500, 5, "single");
+
+    expect(geometry.gap).toBe(4);
+    expect(geometry.left).toBeCloseTo(35);
+    expect(geometry.laneWidth).toBeCloseTo(82.8);
+    expect(laneCenterX(geometry, 0)).toBeCloseTo(76.4);
+    expect(laneCenterX(geometry, 4)).toBeCloseTo(423.6);
+  });
+
+  it("keeps a dedicated tail position for short holds", () => {
+    expect(getHoldGeometry(100, 104, 100)).toEqual({
+      top: 100,
+      bodyHeight: 4,
+      tailY: 104,
+      tailRadius: 18,
+    });
   });
 });
