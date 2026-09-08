@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 import ChartCanvas from "@/components/viewer/ChartCanvas";
 import {
@@ -476,6 +477,9 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     <main className="viewer-page">
       <header className="viewer-header">
         <div>
+          <Link className="viewer-home-link" href="/">
+            ← Home
+          </Link>
           <p className="eyebrow">{chart.displayId} / STATIC PREVIEW</p>
           <h1>{chart.title}</h1>
           {chart.subtitle && <p className="subtitle">{chart.subtitle}</p>}
