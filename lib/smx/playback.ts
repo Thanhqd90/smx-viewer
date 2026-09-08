@@ -9,3 +9,8 @@ export function formatPlaybackTime(seconds: number): string {
 
   return `${minutes}:${remainingSeconds}`;
 }
+
+export function applyViewerOffset(seconds: number, offsetMs: number): number {
+  // Positive calibration delays the chart visually; Assist Tick never uses this helper.
+  return seconds - offsetMs / 1000;
+}

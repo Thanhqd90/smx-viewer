@@ -8,19 +8,22 @@ import {
   deriveAssistEvents,
   getCrossedAssistEvents,
 } from "@/lib/smx/assistTick";
-import { formatPlaybackTime } from "@/lib/smx/playback";
+import { applyViewerOffset, formatPlaybackTime } from "@/lib/smx/playback";
 import {
   clampAssistTickVolume,
   clampScrollSpeed,
   clampVolume,
+  clampViewerOffsetMs,
   DEFAULT_ASSIST_TICK_VOLUME,
   DEFAULT_SCROLL_SPEED,
   DEFAULT_VOLUME,
+  DEFAULT_VIEWER_OFFSET_MS,
   MAX_SCROLL_SPEED,
   MIN_SCROLL_SPEED,
   parseStoredMuted,
   parseStoredAssistTick,
   parseStoredAssistTickVolume,
+  parseStoredViewerOffsetMs,
   parseStoredScrollSpeed,
   parseStoredVolume,
   DEFAULT_PLAYBACK_RATE,
@@ -71,6 +74,9 @@ export default function EditViewer({ displayId }: EditViewerProps) {
   const [assistTickVolume, setAssistTickVolume] = useState(
     DEFAULT_ASSIST_TICK_VOLUME,
   );
+  const [viewerOffsetMs, setViewerOffsetMs] = useState(
+    DEFAULT_VIEWER_OFFSET_MS,
+  );
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const assistEventsRef = useRef<ReturnType<typeof deriveAssistEvents>>([]);
@@ -78,6 +84,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
   const assistTickEnabledRef = useRef(false);
   const assistTickVolumeRef = useRef(DEFAULT_ASSIST_TICK_VOLUME);
   const assistTickPlayerRef = useRef<AssistTickPlayer | null>(null);
+  const viewerOffsetMsRef = useRef(DEFAULT_VIEWER_OFFSET_MS);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -142,6 +149,11 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             localStorage.getItem("smx-viewer.assistTickVolume"),
           ),
         );
+        setViewerOffsetMs(
+          parseStoredViewerOffsetMs(
+            localStorage.getItem("smx-viewer.syncOffsetMs"),
+          ),
+        );
       } catch {
         setVolume(DEFAULT_VOLUME);
         setMuted(false);
@@ -149,6 +161,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
         setPlaybackRate(DEFAULT_PLAYBACK_RATE);
         setAssistTickEnabled(false);
         setAssistTickVolume(DEFAULT_ASSIST_TICK_VOLUME);
+        setViewerOffsetMs(DEFAULT_VIEWER_OFFSET_MS);
       } finally {
         setPreferencesLoaded(true);
       }
@@ -170,6 +183,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
         "smx-viewer.assistTickVolume",
         String(assistTickVolume),
       );
+      localStorage.setItem("smx-viewer.syncOffsetMs", String(viewerOffsetMs));
     } catch {
       // Browser storage can be unavailable; in-memory preferences still work.
     }
@@ -181,6 +195,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     preferencesLoaded,
     scrollSpeed,
     volume,
+    viewerOffsetMs,
   ]);
 
   useEffect(() => {
@@ -188,6 +203,10 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     assistTickVolumeRef.current = assistTickVolume;
     assistTickPlayerRef.current?.setVolume(assistTickVolume);
   }, [assistTickEnabled, assistTickVolume]);
+
+  useEffect(() => {
+    viewerOffsetMsRef.current = viewerOffsetMs;
+  }, [viewerOffsetMs]);
 
   useEffect(() => {
     assistEventsRef.current = chart
@@ -232,7 +251,12 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
       previousAudioTimeRef.current = time;
       setCurrentTime(time);
-      setCurrentBeat(secondsToBeat(time, chart.timing));
+      setCurrentBeat(
+        secondsToBeat(
+          applyViewerOffset(time, viewerOffsetMsRef.current),
+          chart.timing,
+        ),
+      );
 
       if (!audio.paused && !audio.ended) {
         frameId = requestAnimationFrame(updateFromAudio);
@@ -267,7 +291,12 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     const updateFromMedia = () => {
       const time = audio.currentTime;
       setCurrentTime(time);
-      setCurrentBeat(secondsToBeat(time, chart.timing));
+      setCurrentBeat(
+        secondsToBeat(
+          applyViewerOffset(time, viewerOffsetMsRef.current),
+          chart.timing,
+        ),
+      );
     };
 
     audio.addEventListener("play", handlePlay);
@@ -375,7 +404,27 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     audio.currentTime = nextTime;
     previousAudioTimeRef.current = nextTime;
     setCurrentTime(audio.currentTime);
-    setCurrentBeat(secondsToBeat(audio.currentTime, chart.timing));
+    setCurrentBeat(
+      secondsToBeat(
+        applyViewerOffset(audio.currentTime, viewerOffsetMs),
+        chart.timing,
+      ),
+    );
+  };
+
+  const handleViewerOffsetChange = (nextOffsetMs: number) => {
+    const clampedOffsetMs = clampViewerOffsetMs(nextOffsetMs);
+
+    setViewerOffsetMs(clampedOffsetMs);
+
+    if (audioRef.current && chart) {
+      setCurrentBeat(
+        secondsToBeat(
+          applyViewerOffset(audioRef.current.currentTime, clampedOffsetMs),
+          chart.timing,
+        ),
+      );
+    }
   };
 
   const handleAssistTickToggle = () => {
@@ -536,6 +585,39 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             />
             <span>{Math.round(assistTickVolume * 100)}%</span>
           </label>
+          <div className="sync-offset-control">
+            <span>Sync Offset</span>
+            <button
+              type="button"
+              onClick={() => handleViewerOffsetChange(viewerOffsetMs - 10)}
+            >
+              -10 ms
+            </button>
+            <output>{viewerOffsetMs} ms</output>
+            <button
+              type="button"
+              onClick={() => handleViewerOffsetChange(viewerOffsetMs + 10)}
+            >
+              +10 ms
+            </button>
+            <input
+              aria-label="Sync offset"
+              type="range"
+              min="-250"
+              max="250"
+              step="1"
+              value={viewerOffsetMs}
+              onChange={(event) =>
+                handleViewerOffsetChange(Number(event.target.value))
+              }
+            />
+            <button
+              type="button"
+              onClick={() => handleViewerOffsetChange(DEFAULT_VIEWER_OFFSET_MS)}
+            >
+              Reset
+            </button>
+          </div>
         </div>
         <audio ref={audioRef} src={chart.audioUrl} preload="auto" />
         <ChartCanvas

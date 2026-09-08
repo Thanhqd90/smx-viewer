@@ -349,6 +349,36 @@ body {
   min-width: 68px;
 }
 
+.sync-offset-control {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.sync-offset-control input {
+  accent-color: var(--accent);
+  min-width: 140px;
+}
+
+.sync-offset-control output {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  min-width: 52px;
+  text-align: center;
+}
+
+.sync-offset-control button {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  padding: 5px 8px;
+}
+
 .chart-panel audio {
   display: none;
 }

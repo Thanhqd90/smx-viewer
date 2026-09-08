@@ -4,6 +4,8 @@ import {
   clampScrollSpeed,
   clampVolume,
   DEFAULT_SCROLL_SPEED,
+  clampViewerOffsetMs,
+  DEFAULT_VIEWER_OFFSET_MS,
   DEFAULT_ASSIST_TICK_VOLUME,
   clampAssistTickVolume,
   MAX_SCROLL_SPEED,
@@ -11,6 +13,7 @@ import {
   parseStoredMuted,
   parseStoredAssistTick,
   parseStoredAssistTickVolume,
+  parseStoredViewerOffsetMs,
   parseStoredScrollSpeed,
   parseStoredPlaybackRate,
   parseStoredVolume,
@@ -58,5 +61,14 @@ describe("viewer preferences", () => {
       DEFAULT_ASSIST_TICK_VOLUME,
     );
     expect(parseStoredAssistTickVolume(null)).toBe(DEFAULT_ASSIST_TICK_VOLUME);
+  });
+
+  it("parses and clamps browser-local viewer offsets", () => {
+    expect(DEFAULT_VIEWER_OFFSET_MS).toBe(0);
+    expect(parseStoredViewerOffsetMs("100")).toBe(100);
+    expect(parseStoredViewerOffsetMs("-100")).toBe(-100);
+    expect(parseStoredViewerOffsetMs("garbage")).toBe(0);
+    expect(clampViewerOffsetMs(9999)).toBe(250);
+    expect(clampViewerOffsetMs(-9999)).toBe(-250);
   });
 });

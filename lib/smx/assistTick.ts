@@ -53,16 +53,27 @@ export function getCrossedAssistEvents(
 export class AssistTickPlayer {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
+  private buffer: AudioBuffer | null = null;
+  private loadPromise: Promise<void> | null = null;
+  private volume = 0.3;
 
   async resume(): Promise<void> {
     const context = this.getContext();
 
-    if (context && context.state === "suspended") {
+    if (!context) {
+      return;
+    }
+
+    if (context.state === "suspended") {
       await context.resume();
     }
+
+    await this.loadBuffer(context);
   }
 
   setVolume(volume: number): void {
+    this.volume = volume;
+
     if (this.gain) {
       this.gain.gain.value = volume;
     }
@@ -71,22 +82,16 @@ export class AssistTickPlayer {
   play(): void {
     const context = this.getContext();
 
-    if (!context || context.state !== "running") {
+    if (!context || !this.buffer || context.state !== "running") {
       return;
     }
 
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
+    const source = context.createBufferSource();
     const startTime = context.currentTime;
 
-    oscillator.type = "square";
-    oscillator.frequency.setValueAtTime(1100, startTime);
-    gain.gain.setValueAtTime(1, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.045);
-    oscillator.connect(gain);
-    gain.connect(this.gain ?? context.destination);
-    oscillator.start(startTime);
-    oscillator.stop(startTime + 0.05);
+    source.buffer = this.buffer;
+    source.connect(this.gain ?? context.destination);
+    source.start(startTime);
   }
 
   close(): void {
@@ -96,6 +101,8 @@ export class AssistTickPlayer {
 
     this.context = null;
     this.gain = null;
+    this.buffer = null;
+    this.loadPromise = null;
   }
 
   private getContext(): AudioContext | null {
@@ -111,9 +118,36 @@ export class AssistTickPlayer {
 
     this.context = new AudioContextConstructor();
     this.gain = this.context.createGain();
-    this.gain.gain.value = 1;
+    this.gain.gain.value = this.volume;
     this.gain.connect(this.context.destination);
 
     return this.context;
+  }
+
+  private loadBuffer(context: AudioContext): Promise<void> {
+    if (this.buffer) {
+      return Promise.resolve();
+    }
+
+    if (!this.loadPromise) {
+      this.loadPromise = fetch("/assets/Tick.mp3")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Assist Tick asset failed with ${response.status}`);
+          }
+
+          return response.arrayBuffer();
+        })
+        .then((data) => context.decodeAudioData(data))
+        .then((buffer) => {
+          this.buffer = buffer;
+        })
+        .catch((error: unknown) => {
+          this.loadPromise = null;
+          console.error("Failed to load Assist Tick asset", error);
+        });
+    }
+
+    return this.loadPromise;
   }
 }

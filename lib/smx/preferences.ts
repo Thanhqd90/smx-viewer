@@ -5,6 +5,9 @@ export const MAX_SCROLL_SPEED = 800;
 export const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5] as const;
 export const DEFAULT_PLAYBACK_RATE = 1;
 export const DEFAULT_ASSIST_TICK_VOLUME = 0.3;
+export const DEFAULT_VIEWER_OFFSET_MS = 0;
+export const MIN_VIEWER_OFFSET_MS = -250;
+export const MAX_VIEWER_OFFSET_MS = 250;
 
 export type PlaybackRate = (typeof PLAYBACK_RATES)[number];
 
@@ -72,4 +75,20 @@ export function parseStoredAssistTickVolume(value: string | null): number {
   }
 
   return clampAssistTickVolume(Number(value));
+}
+
+export function clampViewerOffsetMs(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_VIEWER_OFFSET_MS;
+  }
+
+  return Math.min(Math.max(value, MIN_VIEWER_OFFSET_MS), MAX_VIEWER_OFFSET_MS);
+}
+
+export function parseStoredViewerOffsetMs(value: string | null): number {
+  if (value === null) {
+    return DEFAULT_VIEWER_OFFSET_MS;
+  }
+
+  return clampViewerOffsetMs(Number(value));
 }
