@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveAssistEvents,
+  getAssistEventsBetween,
   getCrossedAssistEvents,
 } from "../lib/smx/assistTick";
 import { parseTiming } from "../lib/smx/timing";
@@ -43,6 +44,14 @@ describe("assist tick scheduling", () => {
     ];
 
     expect(getCrossedAssistEvents(events, 7, 7.5)).toEqual(events.slice(1));
+  });
+
+  it("finds events in a scheduled lookahead window", () => {
+    const events = [{ timeSeconds: 7 }, { timeSeconds: 7.25 }];
+
+    expect(getAssistEventsBetween(events, 6.95, 7.05)).toEqual([
+      { timeSeconds: 7 },
+    ]);
   });
 
   it("returns no events for backward discontinuities such as seeks", () => {

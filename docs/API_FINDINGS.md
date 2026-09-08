@@ -174,3 +174,86 @@ https://data.stepmaniax.com/sign/in`.
 Per the read-only account requirements, no login/session UI, credential route,
 bookmark route, token storage, or mutation action has been added until the
 official authenticated bookmark endpoint and session contract are provided.
+
+## SMX Tools source verification
+
+The official source archive linked from the SMX Tools reference was inspected:
+
+```text
+https://gustavn.se/smx-tools/smx-tools-source.zip
+```
+
+The relevant source file is `smx-tools/main.py`.
+
+### Login contract
+
+`LoginFrame.try_login()` sends:
+
+```text
+POST https://data.stepmaniax.com/sign/in
+Content-Type: application/json
+```
+
+with this JSON body:
+
+```json
+{
+  "account": "...",
+  "password": "...",
+  "uuid": "generated per login attempt",
+  "apiVersion": 6
+}
+```
+
+On success, the source reads these exact fields:
+
+```text
+data["account"]["username"]
+data["account"]["id"]
+data["auth_token"]
+```
+
+The source passes the token and account ID in the JSON body of later requests;
+it does not use an `Authorization` header. The authenticated payload fields
+are `auth_token`, `auth_gamer`, and, for `/edit/list`, `gamer_id`.
+
+### Authenticated edit list
+
+`MainFrame.__init__()` sends:
+
+```text
+POST https://data.stepmaniax.com/edit/list
+Content-Type: application/json
+```
+
+with:
+
+```json
+{
+  "apiVersion": 6,
+  "auth_token": "...",
+  "auth_gamer": "account id",
+  "gamer_id": "account id"
+}
+```
+
+The source reads the response as:
+
+```text
+data["songs"]
+data["charts"]
+```
+
+`songs` is a mapping keyed by song ID and `charts` is the user's edit list.
+The source does not send pagination fields or perform pagination.
+
+This operation is an authenticated list of the user's edits, not a verified
+bookmarked-edits operation. The source contains no request or filtering logic
+for `bookmark`, `bookmarked`, `favorite`, `favourites`, or `user_bookmarked`.
+There is therefore still no verified read endpoint for a user's bookmarked
+edits. `/edit/list` must not be treated as a bookmark feed without additional
+official evidence.
+
+The source also contains mutation operations such as `/edit/update/{id}`;
+those are explicitly out of scope and were not implemented or investigated
+for this read-only feature.

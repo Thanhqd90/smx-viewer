@@ -6,6 +6,7 @@ export interface AssistEvent {
 }
 
 export const ASSIST_EVENT_EPSILON = 0.001;
+export const ASSIST_SCHEDULE_LOOKAHEAD_SECONDS = 0.04;
 
 export function deriveAssistEvents(
   notes: SMXNote[],
@@ -50,12 +51,30 @@ export function getCrossedAssistEvents(
   );
 }
 
+export function getAssistEventsBetween(
+  events: AssistEvent[],
+  startTime: number,
+  endTime: number,
+  tolerance = ASSIST_EVENT_EPSILON,
+): AssistEvent[] {
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+    return [];
+  }
+
+  return events.filter(
+    (event) =>
+      event.timeSeconds > startTime + tolerance &&
+      event.timeSeconds <= endTime + tolerance,
+  );
+}
+
 export class AssistTickPlayer {
   private context: AudioContext | null = null;
   private gain: GainNode | null = null;
   private buffer: AudioBuffer | null = null;
   private loadPromise: Promise<void> | null = null;
   private volume = 0.3;
+  private sources = new Set<AudioBufferSourceNode>();
 
   async resume(): Promise<void> {
     const context = this.getContext();
@@ -79,7 +98,7 @@ export class AssistTickPlayer {
     }
   }
 
-  play(): void {
+  play(delaySeconds = 0): void {
     const context = this.getContext();
 
     if (!context || !this.buffer || context.state !== "running") {
@@ -91,7 +110,23 @@ export class AssistTickPlayer {
 
     source.buffer = this.buffer;
     source.connect(this.gain ?? context.destination);
-    source.start(startTime);
+    this.sources.add(source);
+    source.addEventListener("ended", () => this.sources.delete(source), {
+      once: true,
+    });
+    source.start(startTime + Math.max(0, delaySeconds));
+  }
+
+  stop(): void {
+    for (const source of this.sources) {
+      try {
+        source.stop();
+      } catch {
+        // The source may already have ended.
+      }
+    }
+
+    this.sources.clear();
   }
 
   close(): void {
@@ -103,6 +138,7 @@ export class AssistTickPlayer {
     this.gain = null;
     this.buffer = null;
     this.loadPromise = null;
+    this.sources.clear();
   }
 
   private getContext(): AudioContext | null {

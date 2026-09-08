@@ -7,7 +7,8 @@ import ChartCanvas from "@/components/viewer/ChartCanvas";
 import {
   AssistTickPlayer,
   deriveAssistEvents,
-  getCrossedAssistEvents,
+  getAssistEventsBetween,
+  ASSIST_SCHEDULE_LOOKAHEAD_SECONDS,
 } from "@/lib/smx/assistTick";
 import { applyViewerOffset, formatPlaybackTime } from "@/lib/smx/playback";
 import {
@@ -82,6 +83,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const assistEventsRef = useRef<ReturnType<typeof deriveAssistEvents>>([]);
   const previousAudioTimeRef = useRef(0);
+  const assistScheduledUntilRef = useRef(0);
   const assistTickEnabledRef = useRef(false);
   const assistTickVolumeRef = useRef(DEFAULT_ASSIST_TICK_VOLUME);
   const assistTickPlayerRef = useRef<AssistTickPlayer | null>(null);
@@ -214,6 +216,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
       ? deriveAssistEvents(chart.notes, chart.timing)
       : [];
     previousAudioTimeRef.current = audioRef.current?.currentTime ?? 0;
+    assistScheduledUntilRef.current = previousAudioTimeRef.current;
   }, [chart]);
 
   useEffect(() => {
@@ -236,18 +239,22 @@ export default function EditViewer({ displayId }: EditViewerProps) {
       const time = audio.currentTime;
 
       if (assistTickEnabledRef.current) {
-        const crossedEvents = getCrossedAssistEvents(
+        const scheduleUntil = Math.max(assistScheduledUntilRef.current, time);
+        const scheduledEvents = getAssistEventsBetween(
           assistEventsRef.current,
-          previousAudioTimeRef.current,
-          time,
+          scheduleUntil,
+          time + ASSIST_SCHEDULE_LOOKAHEAD_SECONDS,
         );
         const player = assistTickPlayerRef.current;
 
         if (player) {
-          for (let index = 0; index < crossedEvents.length; index += 1) {
-            player.play();
+          for (const event of scheduledEvents) {
+            player.play(event.timeSeconds - time);
           }
         }
+
+        assistScheduledUntilRef.current =
+          time + ASSIST_SCHEDULE_LOOKAHEAD_SECONDS;
       }
 
       previousAudioTimeRef.current = time;
@@ -267,6 +274,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     const handlePlay = () => {
       setIsPlaying(true);
       previousAudioTimeRef.current = audio.currentTime;
+      assistScheduledUntilRef.current = audio.currentTime;
 
       if (assistTickEnabledRef.current) {
         const player = ensureAssistTickPlayer(
@@ -282,6 +290,8 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
     const handlePause = () => {
       stopFrameLoop();
+      assistTickPlayerRef.current?.stop();
+      assistScheduledUntilRef.current = audio.currentTime;
       setIsPlaying(false);
     };
 
@@ -404,6 +414,8 @@ export default function EditViewer({ displayId }: EditViewerProps) {
 
     audio.currentTime = nextTime;
     previousAudioTimeRef.current = nextTime;
+    assistTickPlayerRef.current?.stop();
+    assistScheduledUntilRef.current = nextTime;
     setCurrentTime(audio.currentTime);
     setCurrentBeat(
       secondsToBeat(

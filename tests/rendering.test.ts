@@ -35,10 +35,10 @@ describe("chart rendering math", () => {
     const geometry = getLaneGeometry(500, 5, "single");
 
     expect(geometry.gap).toBe(0);
-    expect(geometry.left).toBeCloseTo(45);
-    expect(geometry.laneWidth).toBeCloseTo(82);
-    expect(laneCenterX(geometry, 0)).toBeCloseTo(86);
-    expect(laneCenterX(geometry, 4)).toBeCloseTo(414);
+    expect(geometry.left).toBeCloseTo(112.5);
+    expect(geometry.laneWidth).toBeCloseTo(55);
+    expect(laneCenterX(geometry, 0)).toBeCloseTo(140);
+    expect(laneCenterX(geometry, 4)).toBeCloseTo(360);
   });
 
   it("keeps a dedicated tail position for short holds", () => {
