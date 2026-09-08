@@ -34,11 +34,11 @@ describe("chart rendering math", () => {
   it("centers tightened lanes with a gutter", () => {
     const geometry = getLaneGeometry(500, 5, "single");
 
-    expect(geometry.gap).toBe(4);
-    expect(geometry.left).toBeCloseTo(35);
-    expect(geometry.laneWidth).toBeCloseTo(82.8);
-    expect(laneCenterX(geometry, 0)).toBeCloseTo(76.4);
-    expect(laneCenterX(geometry, 4)).toBeCloseTo(423.6);
+    expect(geometry.gap).toBe(0);
+    expect(geometry.left).toBeCloseTo(45);
+    expect(geometry.laneWidth).toBeCloseTo(82);
+    expect(laneCenterX(geometry, 0)).toBeCloseTo(86);
+    expect(laneCenterX(geometry, 4)).toBeCloseTo(414);
   });
 
   it("keeps a dedicated tail position for short holds", () => {

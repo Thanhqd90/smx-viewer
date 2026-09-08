@@ -148,3 +148,29 @@ It returns lightweight song records including `id`, `game_song_id`, `title`,
 and `artist`. Homepage cards use `song_id` from the 573 edit record to resolve
 titles through this resource; they do not call the full StepManiaX chart
 endpoint.
+
+## Account access investigation
+
+Account/bookmark retrieval is not implemented because the authenticated
+bookmark contract could not be verified without credentials or an official
+endpoint reference.
+
+Verified facts:
+
+- The explicitly named authentication endpoint is `POST
+https://data.stepmaniax.com/sign/in`.
+- An empty, non-credentialed JSON request returns validation errors identifying
+  the required fields as `account` and `password`.
+- A public `GET /sign/in` response reports `invalid-api` and `Endpoint unknown`.
+- The response shape for successful authentication, token/session headers, and
+  expiration were not available from public documentation or this repository.
+- No official bookmarked-edits endpoint, method, pagination contract, or
+  response shape is documented in this repository or exposed by the public
+  service responses inspected.
+- Public `GET /charts` records may contain a per-record `user_bookmarked`
+  boolean, but public lookup returns `false`; adding `user_bookmarked: true` to
+  the public query does not establish a bookmarked-edits feed.
+
+Per the read-only account requirements, no login/session UI, credential route,
+bookmark route, token storage, or mutation action has been added until the
+official authenticated bookmark endpoint and session contract are provided.

@@ -2,10 +2,10 @@ import type { SMXMode, SMXNote } from "./types";
 
 export const PIXELS_PER_BEAT = 80;
 export const NOTE_FIELD_WIDTH_RATIO = 0.96;
-export const NOTE_FIELD_LANE_GAP = 4;
-export const SINGLE_FIELD_WIDTH_RATIO = 0.86;
-export const SINGLE_LANE_GAP = 4;
-export const SINGLE_NOTE_SCALE = 0.84;
+export const NOTE_FIELD_LANE_GAP = 0;
+export const SINGLE_FIELD_WIDTH_RATIO = 0.55;
+export const SINGLE_LANE_GAP = 0;
+export const SINGLE_NOTE_SCALE = 0.8;
 export const QUANTIZATION_EPSILON = 0.0001;
 
 export type BeatQuantization =
