@@ -51,6 +51,46 @@ export function getSingleLaneRotation(track: number): number | null {
   return [-90, 180, 0, 0, 90][track] ?? null;
 }
 
+// Mine icon: column 3, row 0 of arrows.png. Verified by pixel inspection —
+// content bbox x[399,500] y[13,114], a circular target icon padded within
+// the cell like the arrow heads. All other rows in column 3 are empty.
+export const MINE_SPRITE: SpriteRegion = cell(3, 0);
+
+// Mine Pit body: column 5 (x=640) of arrows.png. Verified by pixel
+// inspection — a red/black hazard-stripe tapered bar, content bbox
+// x[658,749] y[0,754]. Meant to be stretched to the pit's rendered height.
+export const PIT_BODY_REGION: SpriteRegion = {
+  x: 640,
+  y: 0,
+  width: SPRITE_CELL_SIZE,
+  height: 755,
+};
+
+// Roll body: column 6 (x=768) of arrows.png. Verified by pixel inspection —
+// a gold chevron-patterned tapered bar, content bbox x[788,875] y[0,826].
+// Meant to be stretched to the roll's rendered height.
+export const ROLL_BODY_REGION: SpriteRegion = {
+  x: 768,
+  y: 0,
+  width: SPRITE_CELL_SIZE,
+  height: 827,
+};
+
+export function getMineSprite(): LaneSprite {
+  return {
+    region: MINE_SPRITE,
+    rotationDegrees: 0,
+  };
+}
+
+export function getPitBodyRegion(): SpriteRegion {
+  return PIT_BODY_REGION;
+}
+
+export function getRollBodyRegion(): SpriteRegion {
+  return ROLL_BODY_REGION;
+}
+
 export function getNoteHeadSprite(
   track: number,
   mode: SMXMode,

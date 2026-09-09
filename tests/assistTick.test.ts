@@ -36,6 +36,20 @@ describe("assist tick scheduling", () => {
     expect(events).toEqual([{ timeSeconds: 7 }, { timeSeconds: 7.25 }]);
   });
 
+  it("excludes mines and mine pits but ticks on a roll's onset", () => {
+    const events = deriveAssistEvents(
+      [
+        { beat: 14, lane: 0, type: "mine" },
+        { beat: 14.5, endBeat: 15.5, lane: 1, type: "pit" },
+        { beat: 16, endBeat: 18, lane: 2, requiredHits: 4, type: "roll" },
+        { beat: 20, lane: 3, type: "tap" },
+      ],
+      timing,
+    );
+
+    expect(events).toEqual([{ timeSeconds: 8 }, { timeSeconds: 10 }]);
+  });
+
   it("returns every event crossed between frames", () => {
     const events = [
       { timeSeconds: 7 },

@@ -1,12 +1,13 @@
 export type SMXMode = "single" | "dual" | "full";
 
-export type SMXNoteType = "tap" | "hold" | "mine";
+export type SMXNoteType = "tap" | "hold" | "mine" | "pit" | "roll";
 
 export interface SMXNote {
   beat: number;
   lane: number;
   type: SMXNoteType;
   endBeat?: number;
+  requiredHits?: number;
   rawTimeMs?: number;
   rawLengthMs?: number;
 }

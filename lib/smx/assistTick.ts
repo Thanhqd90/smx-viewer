@@ -14,6 +14,7 @@ export function deriveAssistEvents(
   tolerance = ASSIST_EVENT_EPSILON,
 ): AssistEvent[] {
   const timestamps = notes
+    .filter((note) => note.type !== "mine" && note.type !== "pit")
     .map((note) => beatToSeconds(note.beat, timing))
     .filter(Number.isFinite)
     .sort((first, second) => first - second);

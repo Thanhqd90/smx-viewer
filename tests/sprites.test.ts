@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getMineSprite,
   getNoteHeadSprite,
+  getPitBodyRegion,
   getQuantizationRow,
+  getRollBodyRegion,
   getSingleLaneRotation,
   SPRITE_CELL_SIZE,
 } from "../lib/smx/sprites";
@@ -39,5 +42,27 @@ describe("SMX sprite mapping", () => {
       rotationDegrees: 0,
     });
     expect(getNoteHeadSprite(0, "dual", "4th")).toBeNull();
+  });
+
+  it("maps the mine icon to column 3, row 0", () => {
+    expect(getMineSprite()).toEqual({
+      region: { x: 384, y: 0, width: 128, height: 128 },
+      rotationDegrees: 0,
+    });
+  });
+
+  it("maps the pit and roll body art to their own isolated columns", () => {
+    expect(getPitBodyRegion()).toEqual({
+      x: 640,
+      y: 0,
+      width: 128,
+      height: 755,
+    });
+    expect(getRollBodyRegion()).toEqual({
+      x: 768,
+      y: 0,
+      width: 128,
+      height: 827,
+    });
   });
 });

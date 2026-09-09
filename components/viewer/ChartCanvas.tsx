@@ -12,7 +12,13 @@ import {
   QUANTIZATION_COLORS,
   SINGLE_NOTE_SCALE,
 } from "@/lib/smx/rendering";
-import { getNoteHeadSprite, SMX_ARROW_SHEET } from "@/lib/smx/sprites";
+import {
+  getMineSprite,
+  getNoteHeadSprite,
+  getPitBodyRegion,
+  getRollBodyRegion,
+  SMX_ARROW_SHEET,
+} from "@/lib/smx/sprites";
 import type { PlayableSMXChart } from "@/lib/smx/types";
 
 interface ChartCanvasProps {
@@ -101,7 +107,13 @@ export default function ChartCanvas({
       context.stroke();
 
       for (const note of chart.notes) {
-        if (note.type !== "tap" && note.type !== "hold") {
+        if (
+          note.type !== "tap" &&
+          note.type !== "hold" &&
+          note.type !== "mine" &&
+          note.type !== "pit" &&
+          note.type !== "roll"
+        ) {
           continue;
         }
 
@@ -159,6 +171,79 @@ export default function ChartCanvas({
             quantization,
             noteColor,
           );
+        } else if (note.type === "mine") {
+          drawMine(context, noteSize, centerX, startY);
+        } else if (note.type === "pit" && note.endBeat !== undefined) {
+          const endY = beatToY(
+            note.endBeat,
+            currentBeat,
+            RECEPTOR_Y,
+            pixelsPerBeat,
+          );
+          const holdGeometry = getHoldGeometry(startY, endY, noteSize);
+
+          drawObstacleBody(
+            context,
+            getPitBodyRegion(),
+            centerX,
+            holdGeometry.top,
+            noteSize,
+            holdGeometry.bodyHeight,
+          );
+          drawMine(context, noteSize, centerX, startY);
+        } else if (note.type === "roll" && note.endBeat !== undefined) {
+          const endY = beatToY(
+            note.endBeat,
+            currentBeat,
+            RECEPTOR_Y,
+            pixelsPerBeat,
+          );
+          const holdGeometry = getHoldGeometry(startY, endY, noteSize);
+
+          drawObstacleBody(
+            context,
+            getRollBodyRegion(),
+            centerX,
+            holdGeometry.top,
+            noteSize,
+            holdGeometry.bodyHeight,
+          );
+          drawNoteHead(
+            context,
+            noteSize,
+            centerX,
+            startY,
+            note.lane,
+            quantization,
+            noteColor,
+          );
+
+          if (note.requiredHits !== undefined) {
+            const labelY = startY + noteSize * 0.42;
+            const labelHeight = 16;
+            const labelWidth = noteSize * 0.5;
+
+            context.fillStyle = "#101720";
+            context.fillRect(
+              centerX - labelWidth / 2,
+              labelY - labelHeight / 2,
+              labelWidth,
+              labelHeight,
+            );
+            context.strokeStyle = "#f4c95d";
+            context.lineWidth = 1;
+            context.strokeRect(
+              centerX - labelWidth / 2,
+              labelY - labelHeight / 2,
+              labelWidth,
+              labelHeight,
+            );
+            context.fillStyle = "#f4c95d";
+            context.font = "bold 12px sans-serif";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText(String(note.requiredHits), centerX, labelY + 1);
+          }
         } else {
           drawNoteHead(
             context,
@@ -205,6 +290,64 @@ export default function ChartCanvas({
         size,
       );
       context.restore();
+    };
+
+    const drawMine = (
+      context: CanvasRenderingContext2D,
+      size: number,
+      centerX: number,
+      centerY: number,
+    ) => {
+      const sprite = getMineSprite();
+
+      if (!spriteSheet) {
+        context.beginPath();
+        context.fillStyle = "#e63946";
+        context.arc(centerX, centerY, size / 2, 0, Math.PI * 2);
+        context.fill();
+        return;
+      }
+
+      context.drawImage(
+        spriteSheet,
+        sprite.region.x,
+        sprite.region.y,
+        sprite.region.width,
+        sprite.region.height,
+        centerX - size / 2,
+        centerY - size / 2,
+        size,
+        size,
+      );
+    };
+
+    const drawObstacleBody = (
+      context: CanvasRenderingContext2D,
+      region: { x: number; y: number; width: number; height: number },
+      centerX: number,
+      top: number,
+      size: number,
+      bodyHeight: number,
+    ) => {
+      const bodyWidth = size * 0.36;
+
+      if (!spriteSheet) {
+        context.fillStyle = "#e63946";
+        context.fillRect(centerX - bodyWidth / 2, top, bodyWidth, bodyHeight);
+        return;
+      }
+
+      context.drawImage(
+        spriteSheet,
+        region.x,
+        region.y,
+        region.width,
+        region.height,
+        centerX - bodyWidth / 2,
+        top,
+        bodyWidth,
+        bodyHeight,
+      );
     };
 
     draw();

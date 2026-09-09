@@ -8,6 +8,8 @@ interface RawNote {
   len?: Fraction;
   time?: number;
   slen?: number;
+  mine?: boolean;
+  taps?: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -67,8 +69,23 @@ function readRawNote(value: unknown, index: number): RawNote {
 
   note.time = readNumber(value, "time");
   note.slen = readNumber(value, "slen");
+  note.taps = readNumber(value, "taps");
+
+  if (value.mine !== undefined) {
+    if (typeof value.mine !== "boolean") {
+      throw new Error(`Invalid mine at index ${index}`);
+    }
+
+    note.mine = value.mine;
+  }
 
   return note;
+}
+
+function computeEndBeat(beat: number, len: Fraction): number {
+  const [lengthNumerator, lengthDenominator] = len;
+
+  return beat + lengthNumerator / lengthDenominator;
 }
 
 export function parseNoteData(noteData: unknown[]): SMXNote[] {
@@ -85,13 +102,36 @@ export function parseNoteData(noteData: unknown[]): SMXNote[] {
     const beatDelta = beatNumerator / beatDenominator;
     const beat = absoluteBeat + beatDelta;
 
-    if (rawNote.len) {
-      const [lengthNumerator, lengthDenominator] = rawNote.len;
-      const endBeat = beat + lengthNumerator / lengthDenominator;
-
+    if (rawNote.mine && rawNote.len) {
       notes.push({
         beat,
-        endBeat,
+        endBeat: computeEndBeat(beat, rawNote.len),
+        lane: rawNote.track,
+        type: "pit",
+        rawLengthMs: rawNote.slen,
+        rawTimeMs: rawNote.time,
+      });
+    } else if (rawNote.mine) {
+      notes.push({
+        beat,
+        lane: rawNote.track,
+        type: "mine",
+        rawTimeMs: rawNote.time,
+      });
+    } else if (rawNote.len && rawNote.taps !== undefined) {
+      notes.push({
+        beat,
+        endBeat: computeEndBeat(beat, rawNote.len),
+        lane: rawNote.track,
+        type: "roll",
+        requiredHits: rawNote.taps,
+        rawLengthMs: rawNote.slen,
+        rawTimeMs: rawNote.time,
+      });
+    } else if (rawNote.len) {
+      notes.push({
+        beat,
+        endBeat: computeEndBeat(beat, rawNote.len),
         lane: rawNote.track,
         type: "hold",
         rawLengthMs: rawNote.slen,
