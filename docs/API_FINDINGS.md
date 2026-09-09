@@ -343,7 +343,7 @@ produces `mine` or `len`, never `taps` or a long-mine `len`+`mine`
 combination — consistent with SM/SSC's simpler note model lacking a native
 Roll or long-Mine concept to convert from.
 
-### Lift (found, not implemented — out of scope)
+### Lift
 
 A `lift: true` field was also observed on hold-shaped notes, e.g. chart
 `32148` (`WV4-Q5P`):
@@ -352,13 +352,32 @@ A `lift: true` field was also observed on hold-shaped notes, e.g. chart
 { "track": 3, "beat": [0, 1], "len": [1, 2], "time": 0, "slen": 1545, "lift": true }
 ```
 
+Raw shape: `{track, beat, len, time, slen, lift: true}` — a Hold with a
+`lift: true` flag added, in the same pattern as Mine/Mine Pit and Roll's
+own flags. Across the 500-chart scan, `lift` appeared 452 times and never
+co-occurred with `mine` or `taps`, and always carried a `len` — an
+unambiguous, verified discriminator.
+
 `lift` does not appear anywhere in the SMX Tools source (`main.py` or
-`convert.py`), so its conversion/export behavior is unconfirmed by that
-reference. It is out of scope for this task (only Mine, Mine Pit, and Roll
-were requested) and was left unimplemented: the parser does not read the
-`lift` field, so a Lift note currently parses as an ordinary Hold — safe,
-no regression, and it can be added later with the same
-field-discriminator pattern once/if verified.
+`convert.py`), so its export/round-trip behavior is unconfirmed by that
+reference; the field-level evidence above (452 real occurrences, always
+`len`, never `mine`/`taps`) was independently sufficient to implement it.
+
+Real gameplay reference screenshots (user-supplied) confirmed the visual
+treatment: a plain gray body (the same asset in column 4/`x:512` of
+`arrows.png` that was initially logged as an "unused reference" — it is
+in fact the Lift body, not an unused Hold asset), a normal quantized arrow
+head at the start, and a downward chevron at the tail — reusing the
+column 2 chevron asset (`x:256`), one cell per quantization row like the
+arrow heads, colored to match the note's quantization and always drawn
+unrotated regardless of lane.
+
+Implemented in `lib/smx/parser.ts` (classified before the generic Hold
+branch, since `lift` always carries `len`), `lib/smx/sprites.ts`
+(`getLiftBodyRegion`, `getLiftTailSprite`), and
+`components/viewer/ChartCanvas.tsx`. Assist Tick behavior for Lift is
+unverified from the public data; it is conservatively left ticking like
+Hold/Roll (only Mine/Pit are excluded) rather than guessed at.
 
 ### Unresolved: `taps` without `len`
 
@@ -386,9 +405,14 @@ alpha bounding boxes), not guessed:
   previously identified candidate region exactly. Used unrotated (the icon
   is rotation-symmetric) and without quantization coloring.
 - Column 4 (`x:512`): a plain gray tapered bar, content bbox x[532,619]
-  y[0,822]. This appears to be an unused reference asset for an ordinary
-  Hold body; the current Hold rendering uses a flat-color rect and this was
-  not changed.
+  y[0,822]. Confirmed via user-supplied real gameplay screenshots to be the
+  **Lift** body (not an unused Hold asset as first guessed) — used as
+  `LIFT_BODY_REGION`, stretched to the lift's rendered length. The ordinary
+  Hold body rendering is unaffected and still uses a flat-color rect.
+- Column 2 (`x:256`): a downward chevron, one colored cell per quantization
+  row, matching the arrow heads' row layout. Confirmed via the same
+  gameplay screenshots to be the **Lift tail** (`getLiftTailSprite`),
+  always drawn unrotated regardless of lane.
 - Column 5 (`x:640`): a red/black diagonal hazard-stripe tapered bar,
   content bbox x[658,749] y[0,754]. Used as the **Mine Pit** body texture
   (stretched to the pit's rendered length), isolated in `lib/smx/sprites.ts`

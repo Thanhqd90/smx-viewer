@@ -123,6 +123,29 @@ describe("parseNoteData", () => {
     });
   });
 
+  it("parses a lift (real raw shape from chart 32148)", () => {
+    const notes = parseNoteData([
+      { version: 1 },
+      {
+        track: 3,
+        beat: [0, 1],
+        len: [1, 2],
+        time: 0,
+        slen: 1545,
+        lift: true,
+      },
+    ]);
+
+    expect(notes[0]).toEqual({
+      beat: 0,
+      endBeat: 0.5,
+      lane: 3,
+      rawLengthMs: 1545,
+      rawTimeMs: 0,
+      type: "lift",
+    });
+  });
+
   it("parses a roll with a required hit count (real raw shape from chart 32284)", () => {
     const notes = parseNoteData([
       { version: 1 },
@@ -147,14 +170,15 @@ describe("parseNoteData", () => {
     });
   });
 
-  it("accumulates delta beats correctly across mixed tap/hold/mine/pit/roll events", () => {
+  it("accumulates delta beats correctly across mixed tap/hold/mine/pit/roll/lift events", () => {
     const notes = parseNoteData([
       { version: 1 },
       { track: 0, beat: [1, 4] },
       { track: 1, beat: [1, 4], len: [1, 2] },
       { track: 2, beat: [1, 4], mine: true },
       { track: 3, beat: [1, 4], mine: true, len: [1, 2] },
-      { track: 4, beat: [1, 4], len: [1, 2], taps: 3 },
+      { track: 4, beat: [1, 4], len: [1, 2], lift: true },
+      { track: 0, beat: [1, 4], len: [1, 2], taps: 3 },
     ]);
 
     expect(
@@ -164,7 +188,8 @@ describe("parseNoteData", () => {
       ["hold", 0.5],
       ["mine", 0.75],
       ["pit", 1],
-      ["roll", 1.25],
+      ["lift", 1.25],
+      ["roll", 1.5],
     ]);
   });
 });

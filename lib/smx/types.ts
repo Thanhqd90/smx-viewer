@@ -1,6 +1,6 @@
 export type SMXMode = "single" | "dual" | "full";
 
-export type SMXNoteType = "tap" | "hold" | "mine" | "pit" | "roll";
+export type SMXNoteType = "tap" | "hold" | "mine" | "pit" | "roll" | "lift";
 
 export interface SMXNote {
   beat: number;

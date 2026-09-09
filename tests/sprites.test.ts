@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getLiftBodyRegion,
+  getLiftTailSprite,
   getMineSprite,
   getNoteHeadSprite,
   getPitBodyRegion,
@@ -63,6 +65,23 @@ describe("SMX sprite mapping", () => {
       y: 0,
       width: 128,
       height: 827,
+    });
+  });
+
+  it("maps the lift body to column 4 and the lift tail to column 2 per quantization row", () => {
+    expect(getLiftBodyRegion()).toEqual({
+      x: 512,
+      y: 0,
+      width: 128,
+      height: 823,
+    });
+    expect(getLiftTailSprite("4th")).toEqual({
+      region: { x: 256, y: 0, width: 128, height: 128 },
+      rotationDegrees: 0,
+    });
+    expect(getLiftTailSprite("64th")).toEqual({
+      region: { x: 256, y: SPRITE_CELL_SIZE * 7, width: 128, height: 128 },
+      rotationDegrees: 0,
     });
   });
 });

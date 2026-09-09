@@ -10,6 +10,7 @@ interface RawNote {
   slen?: number;
   mine?: boolean;
   taps?: number;
+  lift?: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -79,6 +80,14 @@ function readRawNote(value: unknown, index: number): RawNote {
     note.mine = value.mine;
   }
 
+  if (value.lift !== undefined) {
+    if (typeof value.lift !== "boolean") {
+      throw new Error(`Invalid lift at index ${index}`);
+    }
+
+    note.lift = value.lift;
+  }
+
   return note;
 }
 
@@ -116,6 +125,15 @@ export function parseNoteData(noteData: unknown[]): SMXNote[] {
         beat,
         lane: rawNote.track,
         type: "mine",
+        rawTimeMs: rawNote.time,
+      });
+    } else if (rawNote.lift && rawNote.len) {
+      notes.push({
+        beat,
+        endBeat: computeEndBeat(beat, rawNote.len),
+        lane: rawNote.track,
+        type: "lift",
+        rawLengthMs: rawNote.slen,
         rawTimeMs: rawNote.time,
       });
     } else if (rawNote.len && rawNote.taps !== undefined) {

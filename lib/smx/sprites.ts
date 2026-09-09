@@ -76,6 +76,21 @@ export const ROLL_BODY_REGION: SpriteRegion = {
   height: 827,
 };
 
+// Lift body: column 4 (x=512) of arrows.png. Verified by pixel inspection —
+// a plain gray tapered bar, content bbox x[532,619] y[0,822]. Meant to be
+// stretched to the lift's rendered height.
+export const LIFT_BODY_REGION: SpriteRegion = {
+  x: 512,
+  y: 0,
+  width: SPRITE_CELL_SIZE,
+  height: 823,
+};
+
+// Lift tail: column 2, one cell per quantization row, same as the arrow
+// heads. A downward chevron, always drawn unrotated (verified against real
+// gameplay references, which show it pointing down regardless of lane).
+const LIFT_TAIL_COLUMN = 2;
+
 export function getMineSprite(): LaneSprite {
   return {
     region: MINE_SPRITE,
@@ -89,6 +104,17 @@ export function getPitBodyRegion(): SpriteRegion {
 
 export function getRollBodyRegion(): SpriteRegion {
   return ROLL_BODY_REGION;
+}
+
+export function getLiftBodyRegion(): SpriteRegion {
+  return LIFT_BODY_REGION;
+}
+
+export function getLiftTailSprite(quantization: BeatQuantization): LaneSprite {
+  return {
+    region: cell(LIFT_TAIL_COLUMN, getQuantizationRow(quantization)),
+    rotationDegrees: 0,
+  };
 }
 
 export function getNoteHeadSprite(

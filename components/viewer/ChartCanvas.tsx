@@ -13,6 +13,8 @@ import {
   SINGLE_NOTE_SCALE,
 } from "@/lib/smx/rendering";
 import {
+  getLiftBodyRegion,
+  getLiftTailSprite,
   getMineSprite,
   getNoteHeadSprite,
   getPitBodyRegion,
@@ -112,7 +114,8 @@ export default function ChartCanvas({
           note.type !== "hold" &&
           note.type !== "mine" &&
           note.type !== "pit" &&
-          note.type !== "roll"
+          note.type !== "roll" &&
+          note.type !== "lift"
         ) {
           continue;
         }
@@ -244,6 +247,33 @@ export default function ChartCanvas({
             context.textBaseline = "middle";
             context.fillText(String(note.requiredHits), centerX, labelY + 1);
           }
+        } else if (note.type === "lift" && note.endBeat !== undefined) {
+          const endY = beatToY(
+            note.endBeat,
+            currentBeat,
+            RECEPTOR_Y,
+            pixelsPerBeat,
+          );
+          const holdGeometry = getHoldGeometry(startY, endY, noteSize);
+
+          drawObstacleBody(
+            context,
+            getLiftBodyRegion(),
+            centerX,
+            holdGeometry.top,
+            noteSize,
+            holdGeometry.bodyHeight,
+          );
+          drawNoteHead(
+            context,
+            noteSize,
+            centerX,
+            startY,
+            note.lane,
+            quantization,
+            noteColor,
+          );
+          drawLiftTail(context, noteSize, centerX, holdGeometry.tailY, quantization);
         } else {
           drawNoteHead(
             context,
@@ -305,6 +335,34 @@ export default function ChartCanvas({
         context.fillStyle = "#e63946";
         context.arc(centerX, centerY, size / 2, 0, Math.PI * 2);
         context.fill();
+        return;
+      }
+
+      context.drawImage(
+        spriteSheet,
+        sprite.region.x,
+        sprite.region.y,
+        sprite.region.width,
+        sprite.region.height,
+        centerX - size / 2,
+        centerY - size / 2,
+        size,
+        size,
+      );
+    };
+
+    const drawLiftTail = (
+      context: CanvasRenderingContext2D,
+      size: number,
+      centerX: number,
+      centerY: number,
+      quantization: ReturnType<typeof getBeatQuantization>,
+    ) => {
+      const sprite = getLiftTailSprite(quantization);
+
+      if (!spriteSheet) {
+        context.fillStyle = QUANTIZATION_COLORS[quantization];
+        context.fillRect(centerX - size / 2, centerY - 7, size, 14);
         return;
       }
 
