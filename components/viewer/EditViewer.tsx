@@ -10,7 +10,11 @@ import {
   getAssistEventsBetween,
   ASSIST_SCHEDULE_LOOKAHEAD_SECONDS,
 } from "@/lib/smx/assistTick";
-import { applyViewerOffset, formatPlaybackTime } from "@/lib/smx/playback";
+import {
+  applyViewerOffset,
+  formatPlaybackTime,
+  getMeasureBeat,
+} from "@/lib/smx/playback";
 import {
   clampAssistTickVolume,
   clampScrollSpeed,
@@ -574,6 +578,8 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     );
   }
 
+  const measureBeat = getMeasureBeat(currentBeat);
+
   return (
     <main className="viewer-page">
       <header className="viewer-header">
@@ -614,6 +620,9 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             Pause
           </button>
           <span aria-live="polite">{currentTime.toFixed(2)} s</span>
+          <span className="measure-beat-counter" aria-live="polite">
+            Measure {measureBeat.measure} · Beat {measureBeat.beatInMeasure}
+          </span>
         </div>
         <div className="timeline-control">
           <input

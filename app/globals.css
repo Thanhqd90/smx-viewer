@@ -321,6 +321,11 @@ body {
   margin-left: 6px;
 }
 
+.measure-beat-counter {
+  border-left: 1px solid var(--line);
+  padding-left: 12px;
+}
+
 .timeline-control {
   align-items: center;
   display: flex;
