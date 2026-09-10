@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import ChartCanvas from "@/components/viewer/ChartCanvas";
@@ -374,7 +374,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     }
   };
 
-  const handleMuteToggle = () => {
+  const handleMuteToggle = useCallback(() => {
     const nextMuted = !muted;
 
     setMuted(nextMuted);
@@ -382,7 +382,7 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     if (audioRef.current) {
       audioRef.current.muted = nextMuted;
     }
-  };
+  }, [muted]);
 
   const handleScrollSpeedChange = (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -402,27 +402,33 @@ export default function EditViewer({ displayId }: EditViewerProps) {
     }
   };
 
+  const seekTo = useCallback(
+    (requestedTime: number) => {
+      const audio = audioRef.current;
+
+      if (!audio || !chart || !Number.isFinite(audio.duration)) {
+        return;
+      }
+
+      const nextTime = Math.min(Math.max(requestedTime, 0), audio.duration);
+
+      audio.currentTime = nextTime;
+      previousAudioTimeRef.current = nextTime;
+      assistTickPlayerRef.current?.stop();
+      assistScheduledUntilRef.current = nextTime;
+      setCurrentTime(audio.currentTime);
+      setCurrentBeat(
+        secondsToBeat(
+          applyViewerOffset(audio.currentTime, viewerOffsetMs),
+          chart.timing,
+        ),
+      );
+    },
+    [chart, viewerOffsetMs],
+  );
+
   const handleSeek = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current;
-
-    if (!audio || !chart || !Number.isFinite(audio.duration)) {
-      return;
-    }
-
-    const requestedTime = Number(event.target.value);
-    const nextTime = Math.min(Math.max(requestedTime, 0), audio.duration);
-
-    audio.currentTime = nextTime;
-    previousAudioTimeRef.current = nextTime;
-    assistTickPlayerRef.current?.stop();
-    assistScheduledUntilRef.current = nextTime;
-    setCurrentTime(audio.currentTime);
-    setCurrentBeat(
-      secondsToBeat(
-        applyViewerOffset(audio.currentTime, viewerOffsetMs),
-        chart.timing,
-      ),
-    );
+    seekTo(Number(event.target.value));
   };
 
   const handleViewerOffsetChange = (nextOffsetMs: number) => {
@@ -465,6 +471,89 @@ export default function EditViewer({ displayId }: EditViewerProps) {
       nextVolume,
     );
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const audio = audioRef.current;
+      const targetTag = (event.target as HTMLElement | null)?.tagName;
+
+      if (
+        !audio ||
+        !chart ||
+        (targetTag &&
+          ["INPUT", "SELECT", "TEXTAREA", "BUTTON"].includes(targetTag))
+      ) {
+        return;
+      }
+
+      switch (event.key) {
+        case " ": {
+          event.preventDefault();
+
+          if (audio.paused) {
+            handlePlay();
+          } else {
+            handlePause();
+          }
+
+          break;
+        }
+
+        case "ArrowLeft": {
+          event.preventDefault();
+          seekTo(audio.currentTime - (event.shiftKey ? 5 : 1));
+          break;
+        }
+
+        case "ArrowRight": {
+          event.preventDefault();
+          seekTo(audio.currentTime + (event.shiftKey ? 5 : 1));
+          break;
+        }
+
+        case "ArrowUp": {
+          event.preventDefault();
+          setScrollSpeed(clampScrollSpeed(scrollSpeed + 10));
+          break;
+        }
+
+        case "ArrowDown": {
+          event.preventDefault();
+          setScrollSpeed(clampScrollSpeed(scrollSpeed - 10));
+          break;
+        }
+
+        case "Home": {
+          event.preventDefault();
+          seekTo(0);
+          break;
+        }
+
+        case "End": {
+          event.preventDefault();
+
+          if (Number.isFinite(audio.duration)) {
+            seekTo(audio.duration);
+          }
+
+          break;
+        }
+
+        case "m":
+        case "M": {
+          handleMuteToggle();
+          break;
+        }
+
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [chart, scrollSpeed, muted, seekTo, handleMuteToggle]);
 
   if (error) {
     return (
@@ -541,6 +630,10 @@ export default function EditViewer({ displayId }: EditViewerProps) {
             {formatPlaybackTime(currentTime)} / {formatPlaybackTime(duration)}
           </span>
         </div>
+        <p className="keyboard-shortcuts-hint">
+          Space play/pause · ←/→ seek (Shift = 5s) · ↑/↓ scroll speed ·
+          Home/End · M mute
+        </p>
         <div className="preference-controls">
           <label>
             Volume

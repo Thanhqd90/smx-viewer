@@ -340,6 +340,12 @@ body {
   white-space: nowrap;
 }
 
+.keyboard-shortcuts-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin: 0 0 14px;
+}
+
 .preference-controls {
   align-items: center;
   display: flex;
