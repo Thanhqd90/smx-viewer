@@ -1,11 +1,14 @@
 import type { EditChart573 } from "../smx573/types";
 
-export interface PopularEdit {
+export interface BrowseEdit {
   displayId: string;
   title: string;
+  artist?: string;
   author: string;
   mode: "single" | "dual" | "full";
   meter: number;
+  tags: string[];
+  publishedAt: string;
   likes: number;
   playCount: number;
   passCount: number;
@@ -16,36 +19,19 @@ export interface SongMetadata {
   artist?: string;
 }
 
-export function rankPopularEdits(edits: EditChart573[]): EditChart573[] {
-  return edits
-    .filter(
-      (edit) =>
-        edit.is_edit &&
-        edit.edit_publicity === "published" &&
-        ["single", "dual", "full"].includes(edit.edit_style),
-    )
-    .sort((first, second) => {
-      const likesDifference =
-        (second.edit_likes ?? 0) - (first.edit_likes ?? 0);
-
-      if (likesDifference !== 0) {
-        return likesDifference;
-      }
-
-      return (second.play_count ?? 0) - (first.play_count ?? 0);
-    });
-}
-
-export function toPopularEdit(
+export function toBrowseEdit(
   edit: EditChart573,
   song: SongMetadata,
-): PopularEdit {
+): BrowseEdit {
   return {
     displayId: edit.edit_display_id,
     title: song.title,
+    artist: song.artist,
     author: edit.edit_author,
     mode: edit.edit_style,
     meter: edit.meter,
+    tags: edit.edit_tags ?? [],
+    publishedAt: edit.edit_published_at,
     likes: edit.edit_likes ?? 0,
     playCount: edit.play_count ?? 0,
     passCount: edit.pass_count ?? 0,

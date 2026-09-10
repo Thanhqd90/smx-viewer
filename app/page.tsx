@@ -1,7 +1,8 @@
 import Link from "next/link";
 
+import EditCard from "@/components/edits/EditCard";
 import EditLookup from "@/components/home/EditLookup";
-import PopularEditCard from "@/components/home/PopularEditCard";
+import { CATALOG_LIMIT } from "@/lib/smx573/catalog";
 import { getPopularEdits } from "@/lib/smx573/popular";
 
 export default async function Home() {
@@ -25,6 +26,15 @@ export default async function Home() {
         <p className="example-link">
           Example: <Link href="/edit/2P6-239">2P6-239 — Night In Motion</Link>
         </p>
+        <div className="home-actions">
+          <Link className="browse-link" href="/edits">
+            Browse the last {CATALOG_LIMIT} edits
+          </Link>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- redirecting route handler, not a page */}
+          <a className="random-link" href="/edit/random">
+            🎲 Random edit
+          </a>
+        </div>
       </section>
       <section className="popular-section" aria-labelledby="popular-heading">
         <div className="section-heading">
@@ -40,7 +50,7 @@ export default async function Home() {
         ) : (
           <div className="popular-grid">
             {popularEdits.map((edit) => (
-              <PopularEditCard key={edit.displayId} edit={edit} />
+              <EditCard key={edit.displayId} edit={edit} />
             ))}
           </div>
         )}

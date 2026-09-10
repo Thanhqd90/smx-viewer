@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import type { PopularEdit } from "@/lib/smx/popular";
+import type { BrowseEdit } from "@/lib/smx/popular";
 
 const modeLabels = {
   single: "Single",
@@ -8,7 +8,7 @@ const modeLabels = {
   full: "Full",
 } as const;
 
-export default function PopularEditCard({ edit }: { edit: PopularEdit }) {
+export default function EditCard({ edit }: { edit: BrowseEdit }) {
   return (
     <Link
       className="popular-card"
@@ -18,7 +18,10 @@ export default function PopularEditCard({ edit }: { edit: PopularEdit }) {
         <h3>{edit.title}</h3>
         <span>{edit.displayId}</span>
       </div>
-      <p>by {edit.author}</p>
+      <p>
+        by {edit.author}
+        {edit.artist ? ` · ${edit.artist}` : ""}
+      </p>
       <div className="popular-card-meta">
         <span>
           {modeLabels[edit.mode]} · {edit.meter}
